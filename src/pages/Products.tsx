@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -169,6 +170,7 @@ const Products = () => {
   const handleStockExportPDF = async (categoryToExport = "all") => {
     try {
       setExportLoading(true);
+      console.log('Starting PDF export for category:', categoryToExport);
       
       // Fetch all products for export (without pagination)
       const params: any = { 
@@ -176,15 +178,30 @@ const Products = () => {
         status: 'active' 
       };
       
-      // Add category filter if not "all"
+      // Only add category filter if it's not "all"
       if (categoryToExport !== "all") {
         params.category = categoryToExport;
+        console.log('Adding category filter:', categoryToExport);
+      } else {
+        console.log('Exporting all categories - no category filter applied');
       }
       
+      console.log('API params:', params);
       const response = await productsApi.getAll(params);
+      console.log('API response:', response);
       
       if (response.success) {
         const allProducts = response.data.products || response.data || [];
+        console.log('Products to export:', allProducts.length);
+        
+        if (!Array.isArray(allProducts) || allProducts.length === 0) {
+          toast({
+            title: "No Products Found",
+            description: "No products available for export.",
+            variant: "destructive"
+          });
+          return;
+        }
         
         // Create PDF
         const pdf = new jsPDF();
@@ -214,7 +231,9 @@ const Products = () => {
 
         // Calculate total stock value
         const totalStockValue = allProducts.reduce((total: number, product: any) => {
-          return total + (product.stock * (product.costPrice || product.price));
+          const stock = product.stock || 0;
+          const price = product.costPrice || product.price || 0;
+          return total + (stock * price);
         }, 0);
         pdf.text(`Total Stock Value: PKR ${totalStockValue.toLocaleString()}`, margin, yPos);
         yPos += 15;
@@ -246,14 +265,18 @@ const Products = () => {
           }
 
           xPos = margin;
+          const stock = product.stock || 0;
+          const price = product.costPrice || product.price || 0;
+          const productValue = stock * price;
+          
           const rowData = [
-            product.name.substring(0, 20) + (product.name.length > 20 ? '...' : ''),
-            product.sku,
-            product.category.substring(0, 12) + (product.category.length > 12 ? '...' : ''),
-            product.stock.toString(),
-            product.unit,
-            product.price.toLocaleString(),
-            (product.stock * (product.costPrice || product.price)).toLocaleString()
+            (product.name || '').substring(0, 20) + ((product.name || '').length > 20 ? '...' : ''),
+            product.sku || '',
+            (product.category || '').substring(0, 12) + ((product.category || '').length > 12 ? '...' : ''),
+            stock.toString(),
+            product.unit || 'pcs',
+            price.toLocaleString(),
+            productValue.toLocaleString()
           ];
 
           rowData.forEach((data, index) => {
@@ -270,7 +293,7 @@ const Products = () => {
 
         // Save PDF
         const filename = categoryToExport === "all" 
-          ? `stock_export_${new Date().toISOString().split('T')[0]}.pdf`
+          ? `stock_export_all_${new Date().toISOString().split('T')[0]}.pdf`
           : `stock_export_${categoryToExport}_${new Date().toISOString().split('T')[0]}.pdf`;
         pdf.save(filename);
 
@@ -278,12 +301,17 @@ const Products = () => {
           title: "PDF Export Successful",
           description: `Exported ${allProducts.length} products to PDF${categoryToExport !== "all" ? ` for category: ${categoryToExport}` : ''}.`,
         });
+        
+        console.log('PDF export completed successfully');
+      } else {
+        console.error('API response not successful:', response);
+        throw new Error('Failed to fetch products from API');
       }
     } catch (error) {
       console.error('Failed to export stock to PDF:', error);
       toast({
         title: "PDF Export Failed",
-        description: "Failed to export stock data to PDF. Please try again.",
+        description: `Failed to export stock data to PDF. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
