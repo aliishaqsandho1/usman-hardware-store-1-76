@@ -9,7 +9,7 @@ interface OrdersHeaderProps {
 
 export const OrdersHeader = ({ onPDFExport, exportLoading }: OrdersHeaderProps) => {
   return (
-    <div className="flex items-center justify-between mb-3">
+    <div className="flex items-center justify-between ">
       <div className="flex items-center gap-2">
         <div>
           <h1 className="text-3xl font-bold text-slate-500">Orders Management</h1>
