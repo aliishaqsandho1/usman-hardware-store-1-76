@@ -26,6 +26,27 @@ interface Sale {
   createdAt: string;
 }
 
+// Helper function to format time to 12-hour Pakistani format
+const formatPakistaniTime = (timeString: string): string => {
+  try {
+    // Create a date object for today with the given time
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    
+    // Convert to Pakistani timezone and format to 12-hour format
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Karachi'
+    });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return timeString; // Return original if formatting fails
+  }
+};
+
 export const useOrderPDFGenerator = () => {
   const { toast } = useToast();
 
@@ -123,7 +144,7 @@ export const useOrderPDFGenerator = () => {
       pdf.setTextColor(0, 0, 0);
 
       // HEADER SECTION
-      pdf.setFillColor(26, 54, 93);
+        pdf.setFillColor(26, 54, 93);
       pdf.roundedRect(4, yPos, pageWidth - 8, 32, 2, 2, 'F');
       
       pdf.setTextColor(255, 255, 255);
@@ -135,7 +156,7 @@ export const useOrderPDFGenerator = () => {
       pdf.setFont('helvetica', 'normal');
       pdf.text('Premium Furniture Hardware', pageWidth / 2, yPos + 13, { align: 'center' });
       pdf.text('Hafizabad, Punjab', pageWidth / 2, yPos + 18, { align: 'center' });
-      pdf.text('+92-300-1234567', pageWidth / 2, yPos + 23, { align: 'center' });
+      pdf.text('+92-322-6506118', pageWidth / 2, yPos + 23, { align: 'center' });
       pdf.text('www.usmanhardware.com', pageWidth / 2, yPos + 28, { align: 'center' });
 
       yPos += 40;
@@ -180,14 +201,14 @@ export const useOrderPDFGenerator = () => {
       pdf.setFont('helvetica', 'bold');
       pdf.text('Time:', 8, yPos);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(order.time, 25, yPos);
+      pdf.text(formatPakistaniTime(order.time), 25, yPos);
       yPos += 5;
       
       pdf.setFont('helvetica', 'bold');
       pdf.text('Customer:', 8, yPos);
       pdf.setFont('helvetica', 'normal');
-      const customerName = order.customerName || 'Walk-in Customer';
-      pdf.text(customerName.length > 23 ? customerName.substring(0, 23) + '...' : customerName, 25, yPos);
+      const customerDisplayName = order.customerName || 'Walk-in Customer';
+      pdf.text(customerDisplayName.length > 23 ? customerDisplayName.substring(0, 23) + '...' : customerDisplayName, 25, yPos);
       yPos += 5;
       
       pdf.setFont('helvetica', 'bold');
@@ -336,8 +357,8 @@ export const useOrderPDFGenerator = () => {
       pdf.setFontSize(5);
       pdf.text('Items exchangeable within 7 days', pageWidth / 2, yPos + 7, { align: 'center' });
       pdf.text('Original receipt required', pageWidth / 2, yPos + 10, { align: 'center' });
-      pdf.text('Support: +92-300-1234567', pageWidth / 2, yPos + 13, { align: 'center' });
-      pdf.text('Hours: Mon-Sat 9AM-8PM', pageWidth / 2, yPos + 16, { align: 'center' });
+      pdf.text('Support: +92-322-6506118', pageWidth / 2, yPos + 13, { align: 'center' });
+      pdf.text('Hours: Sat-Thu 8AM-8PM', pageWidth / 2, yPos + 16, { align: 'center' });
       yPos += 23;
 
       // FINAL FOOTER
@@ -347,8 +368,13 @@ export const useOrderPDFGenerator = () => {
       pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPos, { align: 'center' });
       pdf.text(`Receipt ID: ${order.orderNumber}`, pageWidth / 2, yPos + 3, { align: 'center' });
 
-      // Save with descriptive filename
-      pdf.save(`UH_Receipt_${order.orderNumber}_80mm.pdf`);
+      // Create filename with customer name + order number
+      const customerFilenamePart = order.customerName || 'Walk-in-Customer';
+      const sanitizedCustomerName = customerFilenamePart.replace(/[^a-zA-Z0-9-_]/g, '-');
+      const filename = `${sanitizedCustomerName} ${order.orderNumber}.pdf`;
+
+      // Save with new filename format
+      pdf.save(filename);
       
       toast({
         title: "Receipt Generated!",
